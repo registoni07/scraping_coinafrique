@@ -96,7 +96,7 @@ if menu_option == "Scraper en utilisant Selenium":
 # -----------------------------
 # OPTION BEAUTIFULSOUP (inchangée)
 # -----------------------------
-elif menu_option == "Scraper en utilisant BeautifulSoup":
+if menu_option == "Scraper en utilisant BeautifulSoup":
     st.info(f"Scraping {index_value} page(s) avec BeautifulSoup")
 
     # Définition des catégories à scraper
