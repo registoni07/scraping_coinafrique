@@ -6,14 +6,6 @@ from datetime import datetime, timedelta
 import numpy as np
 
 def show_dashboard():
-    # -----------------------------
-    # CONFIGURATION PAGE
-    # -----------------------------
-    st.set_page_config(
-        page_title="Dashboard CoinAfrique",
-        page_icon="🐾",
-        layout="wide"
-    )
 
     # -----------------------------
     # CSS MODERNE
