@@ -173,9 +173,7 @@ elif menu_option == "Télécharger des données déjà scrapées (Web Scraper) (
             st.warning(f"Le fichier {file} est introuvable dans {csv_folder}/")
 
 elif menu_option == "Voir dashboard des données":
-    import importlib
-    import dashboard
-    importlib.reload(dashboard)
+    from dashboard import *
 
 elif menu_option == "Formulaire d'evaluation de l'application":
 
