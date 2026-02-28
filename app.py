@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from database.db import create_table, clear_table
-from scrapers.beautifulsoup_scraper import scrape_category
 from scrapers.selenium_scraper import scrape_category_selenium
 import os
 
@@ -96,43 +95,35 @@ if menu_option == "Scraper en utilisant Selenium":
 # -----------------------------
 # OPTION BEAUTIFULSOUP (inchangée)
 # -----------------------------
-if menu_option == "Scraper en utilisant BeautifulSoup":
+elif menu_option == "Scraper en utilisant BeautifulSoup":
     st.info(f"Scraping {index_value} page(s) avec BeautifulSoup")
 
-    # Définition des catégories à scraper
-    categories = {
-        "Chiens": "https://sn.coinafrique.com/categorie/chiens",
-        "Moutons": "https://sn.coinafrique.com/categorie/moutons",
-        "Poules / Lapins / Pigeons": "https://sn.coinafrique.com/categorie/poules-lapins-et-pigeons",
-        "Autres animaux": "https://sn.coinafrique.com/categorie/autres-animaux"
-    }
-
-    # Bouton pour lancer le scraping
     if st.button("Lancer le scraping") and not st.session_state.scraping:
         st.session_state.scraping = True
         status_placeholder = st.empty()
         status_placeholder.markdown("**Scraping en cours, veuillez patienter ...**")
 
-        # Vider la table avant nouveau scraping
         clear_table()
+
+        categories = {
+            "Chiens": "https://sn.coinafrique.com/categorie/chiens",
+            "Moutons": "https://sn.coinafrique.com/categorie/moutons",
+            "Poules / Lapins / Pigeons": "https://sn.coinafrique.com/categorie/poules-lapins-et-pigeons",
+            "Autres animaux": "https://sn.coinafrique.com/categorie/autres-animaux"
+        }
 
         all_data = {}
         progress_bar = st.progress(0)
 
         with st.spinner("Scraping en cours, veuillez patienter ..."):
             for i, (cat, url) in enumerate(categories.items(), 1):
-                try:
-                    data = scrape_category(cat, url, max_pages=index_value)
-                    all_data[cat] = data
-                except Exception as e:
-                    all_data[cat] = []
-                    st.error(f"Erreur lors du scraping de {cat}: {e}")
-
+                from scrapers.beautifulsoup_scraper import scrape_category
+                data = scrape_category(cat, url, max_pages=index_value)
+                all_data[cat] = data
                 progress_bar.progress(i / len(categories))
 
         st.success("Scraping terminé et données sauvegardées !")
 
-        # Afficher les résultats par catégorie
         for cat, data in all_data.items():
             st.subheader(cat)
             if data:
@@ -143,7 +134,6 @@ if menu_option == "Scraper en utilisant BeautifulSoup":
                 st.caption("Dataset : 0 lignes x 0 colonnes")
                 st.write("Aucune donnée trouvée pour cette catégorie.")
 
-        # Réinitialiser le statut pour permettre de relancer
         st.session_state.scraping = False
         status_placeholder.empty()
 # -----------------------------

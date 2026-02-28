@@ -1,104 +1,76 @@
-# scrapers/beautifulsoup_scraper.py
 import requests
 from bs4 import BeautifulSoup
+from database.db import save_to_db
 import pandas as pd
 import numpy as np
 
 def nettoyer_prix(val):
-    """Nettoyage robuste d'une chaîne prix -> float ou np.nan"""
+    """
+    Nettoie la valeur du prix : supprime espaces, virgules, texte non numérique et convertit en float.
+    Retourne np.nan si valeur invalide.
+    """
     if pd.isna(val):
         return np.nan
     val = str(val).strip()
-    if not val or 'Prix sur demande' in val or 'Sur demande' in val:
+    if 'Prix sur demande' in val:
         return np.nan
-    # normaliser les espaces non-breakable
-    val = val.replace('\u00A0', ' ')
-    # supprimer espaces milliers et points/virgules incorrects
-    # si le format utilise virgule comme décimal, il faudrait remplacer ',' -> '.'
-    # ici on supprime virgules/espaces qui sont le plus souvent des séparateurs de milliers
+    # Supprimer espaces et virgules
     val = val.replace(' ', '').replace(',', '')
-    # garder chiffres et éventuellement un point
+    # Ne garder que les chiffres et éventuellement un point
     chiffres = ''.join(c for c in val if c.isdigit() or c == '.')
     if chiffres == '':
         return np.nan
-    try:
-        return float(chiffres)
-    except:
-        return np.nan
+    return float(chiffres)
+
 
 def scrape_category(categorie, base_url, max_pages=1, remplir_nan=True):
     """
-    Scraper une catégorie sur CoinAfrique (BeautifulSoup) — version robuste pour Cloud.
-    Retourne une liste de dicts: [{'Nom / Détails':..., 'Prix':..., 'Adresse':..., 'Image':...}, ...]
-    Lève RuntimeError en cas d'erreur de requête pour permettre affichage dans Streamlit.
+    Scraper une catégorie sur CoinAfrique avec BeautifulSoup
+    et nettoyer automatiquement les prix.
     """
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/120.0.0.0 Safari/537.36"
-    }
-    data = []
+    data = []  # liste pour affichage / Streamlit
 
     for page in range(1, max_pages + 1):
         url = f"{base_url}?page={page}"
-        try:
-            resp = requests.get(url, headers=headers, timeout=15)
-            resp.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            # remonter l'erreur pour que l'app l'affiche
-            raise RuntimeError(f"Requête vers {url} échouée: {e}")
-
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        # sélecteur principal (garde les deux options si site a changé)
-        annonces = soup.select("div.col.s6.m4.l3")
-        if not annonces:
-            # fallback selectors si structure différente
-            annonces = soup.select(".listing-item, .ad-card, article, .ad__card")
-        # si toujours vide, on continue (on ne lève pas d'erreur pour un seul page vide)
-        if not annonces:
+        response = requests.get(url)
+        if response.status_code != 200:
+            print(f"Page {page} inaccessible, code {response.status_code}")
             continue
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        annonces = soup.find_all("div", class_="col s6 m4 l3")  # adapte selon ton site
 
         for ann in annonces:
             # Titre / nom
             a_tag = ann.find("a")
-            titre = a_tag.get("title") if a_tag and a_tag.has_attr("title") else (a_tag.text.strip() if a_tag else "N/A")
+            titre = a_tag['title'] if a_tag and 'title' in a_tag.attrs else "N/A"
 
             # Localisation
-            location = "N/A"
-            loc_tag = ann.select_one("p.ad__card-location span")
-            if loc_tag:
-                location = loc_tag.get_text(strip=True)
-            else:
-                # fallback
-                loc_tag2 = ann.select_one(".location, .ad-location")
-                if loc_tag2:
-                    location = loc_tag2.get_text(strip=True)
+            loc_tag = ann.find("p", class_="ad__card-location")
+            location = loc_tag.span.text.strip() if loc_tag and loc_tag.span else "N/A"
 
             # Prix
-            prix_raw = "N/A"
-            prix_tag = ann.select_one("p.ad__card-price")
-            if prix_tag:
-                prix_raw = prix_tag.get_text(strip=True)
-            else:
-                prix_tag2 = ann.select_one(".price, .ad-price")
-                if prix_tag2:
-                    prix_raw = prix_tag2.get_text(strip=True)
+            prix_tag = ann.find("p", class_="ad__card-price")
+            prix_raw = prix_tag.text.strip() if prix_tag else "N/A"
             prix = nettoyer_prix(prix_raw)
 
             # Image
-            image_lien = "N/A"
             img_tag = ann.find("img")
             if img_tag:
-                src = img_tag.get("src") or img_tag.get("data-src") or ""
+                src = img_tag.get("src", "")
                 if src.startswith("//"):
                     image_lien = "https:" + src
                 elif src.startswith("/"):
                     image_lien = "https://sn.coinafrique.com" + src
                 else:
                     image_lien = src
+            else:
+                image_lien = "N/A"
 
-            # Ajouter à la liste
+            # Sauvegarde dans la DB
+            save_to_db(categorie, titre, prix, location, image_lien)
+
+            # Ajouter à la liste pour affichage
             data.append({
                 "Nom / Détails": titre,
                 "Prix": prix,
@@ -106,14 +78,13 @@ def scrape_category(categorie, base_url, max_pages=1, remplir_nan=True):
                 "Image": image_lien
             })
 
-    # DataFrame pour post-traitement (médiane)
+    # Transformer en DataFrame pour traitement final
     df = pd.DataFrame(data)
-    if remplir_nan and not df.empty:
-        # remplacer NaN par la médiane calculée sur les valeurs numériques
-        df['Prix'] = pd.to_numeric(df['Prix'], errors='coerce')
-        median_prix = df['Prix'].median()
-        if not np.isnan(median_prix):
-            df['Prix'] = df['Prix'].fillna(median_prix)
 
-    # retourne la liste de dicts (compatible avec st.dataframe(pd.DataFrame(list_of_dicts)))
-    return df.to_dict(orient="records")
+    # Remplir les prix manquants par la médiane si demandé
+    if remplir_nan and not df.empty:
+        median_prix = df['Prix'].median()
+        df['Prix'] = df['Prix'].fillna(median_prix)
+        # print(f"Médiane du prix pour {categorie} : {median_prix:,.0f} FCFA")
+
+    return df.to_dict(orient="records")  # retourne la liste de dicts pour Streamlit
