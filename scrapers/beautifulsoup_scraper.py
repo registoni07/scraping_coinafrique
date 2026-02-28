@@ -3,45 +3,52 @@ from bs4 import BeautifulSoup
 from database.db import save_to_db
 import pandas as pd
 import numpy as np
+import streamlit as st  # pour afficher les erreurs sur Streamlit
 
 def nettoyer_prix(val):
-    """
-    Nettoie la valeur du prix : supprime espaces, virgules, texte non numérique et convertit en float.
-    Retourne np.nan si valeur invalide.
-    """
     if pd.isna(val):
         return np.nan
     val = str(val).strip()
     if 'Prix sur demande' in val:
         return np.nan
-    # Supprimer espaces et virgules
     val = val.replace(' ', '').replace(',', '')
-    # Ne garder que les chiffres et éventuellement un point
     chiffres = ''.join(c for c in val if c.isdigit() or c == '.')
     if chiffres == '':
         return np.nan
     return float(chiffres)
 
-
 def scrape_category(categorie, base_url, max_pages=1, remplir_nan=True):
     """
     Scraper une catégorie sur CoinAfrique avec BeautifulSoup
     et nettoyer automatiquement les prix.
+    Affiche les erreurs et logs pour faciliter le debug sur Streamlit Cloud.
     """
-    data = []  # liste pour affichage / Streamlit
+    data = []
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/145.0.0.0 Safari/537.36"
+    }
 
     for page in range(1, max_pages + 1):
         url = f"{base_url}?page={page}"
-        response = requests.get(url)
-        if response.status_code != 200:
-            print(f"Page {page} inaccessible, code {response.status_code}")
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            st.error(f"Erreur sur la page {page} ({url}) : {e}")
             continue
 
         soup = BeautifulSoup(response.text, "html.parser")
-        annonces = soup.find_all("div", class_="col s6 m4 l3")  # adapte selon ton site
+        annonces = soup.find_all("div", class_="col s6 m4 l3")
+
+        if not annonces:
+            st.warning(f"Aucune annonce trouvée sur la page {page} ({url}).")
+            continue
 
         for ann in annonces:
-            # Titre / nom
+            # Titre
             a_tag = ann.find("a")
             titre = a_tag['title'] if a_tag and 'title' in a_tag.attrs else "N/A"
 
@@ -67,10 +74,12 @@ def scrape_category(categorie, base_url, max_pages=1, remplir_nan=True):
             else:
                 image_lien = "N/A"
 
-            # Sauvegarde dans la DB
-            save_to_db(categorie, titre, prix, location, image_lien)
+            # Sauvegarde dans DB
+            try:
+                save_to_db(categorie, titre, prix, location, image_lien)
+            except Exception as e:
+                st.warning(f"Impossible de sauvegarder dans la DB : {e}")
 
-            # Ajouter à la liste pour affichage
             data.append({
                 "Nom / Détails": titre,
                 "Prix": prix,
@@ -78,13 +87,15 @@ def scrape_category(categorie, base_url, max_pages=1, remplir_nan=True):
                 "Image": image_lien
             })
 
-    # Transformer en DataFrame pour traitement final
     df = pd.DataFrame(data)
 
-    # Remplir les prix manquants par la médiane si demandé
+    # Remplir les NaN par la médiane si demandé
     if remplir_nan and not df.empty:
         median_prix = df['Prix'].median()
         df['Prix'] = df['Prix'].fillna(median_prix)
-        # print(f"Médiane du prix pour {categorie} : {median_prix:,.0f} FCFA")
+        st.info(f"Médiane du prix pour {categorie} : {median_prix:,.0f} FCFA")
 
-    return df.to_dict(orient="records")  # retourne la liste de dicts pour Streamlit
+    if df.empty:
+        st.warning(f"Aucune donnée récupérée pour la catégorie {categorie}.")
+
+    return df.to_dict(orient="records")
