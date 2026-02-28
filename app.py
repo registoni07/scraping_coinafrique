@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from database.db import create_table, clear_table
-# from scrapers.selenium_scraper import scrape_category_selenium
+from scrapers.selenium_scraper import scrape_category_selenium
 import os
 
 # Création DB si nécessaire
@@ -46,58 +46,69 @@ if "scraping" not in st.session_state:
 # -----------------------------
 # SCRAPING SELON MENU
 # -----------------------------
-# if menu_option == "Scraper en utilisant Selenium":
-#     st.info(f"Scraping {index_value} page(s) avec Selenium")
-#
-#     # Bouton unique
-#     if st.button("Lancer le scraping") and not st.session_state.scraping:
-#         st.session_state.scraping = True
-#         status_placeholder = st.empty()
-#         status_placeholder.markdown("**Scraping en cours, veuillez patienter ...**")
-#
-#         # Vider la table avant nouveau scraping
-#         clear_table()
-#
-#         categories = {
-#             "Chiens": "https://sn.coinafrique.com/categorie/chiens",
-#             "Moutons": "https://sn.coinafrique.com/categorie/moutons",
-#             "Poules / Lapins / Pigeons": "https://sn.coinafrique.com/categorie/poules-lapins-et-pigeons",
-#             "Autres animaux": "https://sn.coinafrique.com/categorie/autres-animaux"
-#         }
-#
-#         all_data = {}
-#         progress_bar = st.progress(0)
-#
-#         # Scraper chaque catégorie
-#         with st.spinner("Scraping en cours, veuillez patienter ..."):
-#             for i, (cat, url) in enumerate(categories.items(), 1):
-#                 data = scrape_category_selenium(cat, url, max_pages=index_value)
-#                 all_data[cat] = data
-#                 progress_bar.progress(i / len(categories))
-#
-#         st.success("Scraping terminé et données sauvegardées !")
-#
-#         # Afficher les résultats
-#         for cat, data in all_data.items():
-#             st.subheader(cat)
-#             if data:
-#                 df = pd.DataFrame(data)
-#                 st.caption(f"Dataset : {len(df):,} lignes x {df.shape[1]} colonnes")
-#                 st.dataframe(df)
-#             else:
-#                 st.caption("Dataset : 0 lignes x 0 colonnes")
-#                 st.write("Aucune donnée trouvée pour cette catégorie.")
-#
-#         # Réinitialiser le statut pour pouvoir relancer
-#         st.session_state.scraping = False
-#         status_placeholder.empty()
+if menu_option == "Scraper en utilisant Selenium":
+    st.info(f"Scraping {index_value} page(s) avec Selenium")
+    st.caption(
+        "⚠️ Remarque : Le module de scraping fonctionne correctement en local. "
+        "En raison des restrictions de l’environnement Streamlit Cloud "
+        " le scraping peut ne pas s’exécuter en ligne. "
+        "Pour tester pleinement toutes les fonctionnalités, veuillez cloner le projet depuis GitHub "
+        "et l’exécuter en local en suivant les instructions dans le readme."
+    )
+    # Bouton unique
+    if st.button("Lancer le scraping") and not st.session_state.scraping:
+        st.session_state.scraping = True
+        status_placeholder = st.empty()
+        status_placeholder.markdown("**Scraping en cours, veuillez patienter ...**")
+
+        # Vider la table avant nouveau scraping
+        clear_table()
+
+        categories = {
+            "Chiens": "https://sn.coinafrique.com/categorie/chiens",
+            "Moutons": "https://sn.coinafrique.com/categorie/moutons",
+            "Poules / Lapins / Pigeons": "https://sn.coinafrique.com/categorie/poules-lapins-et-pigeons",
+            "Autres animaux": "https://sn.coinafrique.com/categorie/autres-animaux"
+        }
+
+        all_data = {}
+        progress_bar = st.progress(0)
+
+        # Scraper chaque catégorie
+        with st.spinner("Scraping en cours, veuillez patienter ..."):
+            for i, (cat, url) in enumerate(categories.items(), 1):
+                data = scrape_category_selenium(cat, url, max_pages=index_value)
+                all_data[cat] = data
+                progress_bar.progress(i / len(categories))
+
+        st.success("Scraping terminé et données sauvegardées !")
+
+        # Afficher les résultats
+        for cat, data in all_data.items():
+            st.subheader(cat)
+            if data:
+                df = pd.DataFrame(data)
+                st.caption(f"Dataset : {len(df):,} lignes x {df.shape[1]} colonnes")
+                st.dataframe(df)
+            else:
+                st.caption("Dataset : 0 lignes x 0 colonnes")
+                st.write("Aucune donnée trouvée pour cette catégorie.")
+
+        # Réinitialiser le statut pour pouvoir relancer
+        st.session_state.scraping = False
+        status_placeholder.empty()
 
 # -----------------------------
 # OPTION BEAUTIFULSOUP (inchangée)
 # -----------------------------
 elif menu_option == "Scraper en utilisant BeautifulSoup":
     st.info(f"Scraping {index_value} page(s) avec BeautifulSoup")
-
+    st.caption(
+        "⚠️ Remarque : Le module de scraping fonctionne correctement en local. "
+        "En raison des restrictions de l’environnement Streamlit Cloud "
+        " le scraping peut ne pas s’exécuter en ligne. "
+        "Pour tester pleinement toutes les fonctionnalités, veuillez cloner le projet depuis GitHub "
+        "et l’exécuter en local en suivant les instructions dans le readme.")
     if st.button("Lancer le scraping") and not st.session_state.scraping:
         st.session_state.scraping = True
         status_placeholder = st.empty()
