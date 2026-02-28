@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from database.db import save_to_db
+from database.scraping_db import save_to_db
 import pandas as pd
 import numpy as np
 

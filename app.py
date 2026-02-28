@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from database.db import create_table, clear_table
+from database.scraping_db import create_table, clear_table
 from scrapers.selenium_scraper import scrape_category_selenium
 import os
 
