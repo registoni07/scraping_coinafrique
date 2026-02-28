@@ -49,48 +49,15 @@ if "scraping" not in st.session_state:
 if menu_option == "Scraper en utilisant Selenium":
     st.info(f"Scraping {index_value} page(s) avec Selenium")
 
-    # Bouton unique
     if st.button("Lancer le scraping") and not st.session_state.scraping:
         st.session_state.scraping = True
+
+        # Placeholder pour afficher le message
         status_placeholder = st.empty()
-        status_placeholder.markdown("**Scraping en cours, veuillez patienter ...**")
+        status_placeholder.markdown("**Félicitations ! Le bouton fonctionne 👏**")
 
-        # Vider la table avant nouveau scraping
-        clear_table()
-
-        categories = {
-            "Chiens": "https://sn.coinafrique.com/categorie/chiens",
-            "Moutons": "https://sn.coinafrique.com/categorie/moutons",
-            "Poules / Lapins / Pigeons": "https://sn.coinafrique.com/categorie/poules-lapins-et-pigeons",
-            "Autres animaux": "https://sn.coinafrique.com/categorie/autres-animaux"
-        }
-
-        all_data = {}
-        progress_bar = st.progress(0)
-
-        # Scraper chaque catégorie
-        with st.spinner("Scraping en cours, veuillez patienter ..."):
-            for i, (cat, url) in enumerate(categories.items(), 1):
-                data = scrape_category_selenium(cat, url, max_pages=index_value)
-                all_data[cat] = data
-                progress_bar.progress(i / len(categories))
-
-        st.success("Scraping terminé et données sauvegardées !")
-
-        # Afficher les résultats
-        for cat, data in all_data.items():
-            st.subheader(cat)
-            if data:
-                df = pd.DataFrame(data)
-                st.caption(f"Dataset : {len(df):,} lignes x {df.shape[1]} colonnes")
-                st.dataframe(df)
-            else:
-                st.caption("Dataset : 0 lignes x 0 colonnes")
-                st.write("Aucune donnée trouvée pour cette catégorie.")
-
-        # Réinitialiser le statut pour pouvoir relancer
+        # Réinitialiser l'état pour pouvoir recliquer
         st.session_state.scraping = False
-        status_placeholder.empty()
 
 # -----------------------------
 # OPTION BEAUTIFULSOUP (inchangée)
