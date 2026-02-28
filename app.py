@@ -50,11 +50,9 @@ if menu_option == "Scraper en utilisant Selenium":
     st.info(f"Scraping {index_value} page(s) avec Selenium")
     st.caption(
         "⚠️ Remarque : Le module de scraping fonctionne correctement en local. "
-        "En raison des restrictions de l’environnement Streamlit Cloud "
-        " le scraping peut ne pas s’exécuter en ligne. "
+        "Pour des raisons inconnus le scraping ne s'execute pas en ligne. "
         "Pour tester pleinement toutes les fonctionnalités, veuillez cloner le projet depuis GitHub "
-        "et l’exécuter en local en suivant les instructions dans le readme."
-    )
+        "et l’exécuter en local en suivant les instructions dans le readme.")
     # Bouton unique
     if st.button("Lancer le scraping") and not st.session_state.scraping:
         st.session_state.scraping = True
@@ -105,8 +103,7 @@ elif menu_option == "Scraper en utilisant BeautifulSoup":
     st.info(f"Scraping {index_value} page(s) avec BeautifulSoup")
     st.caption(
         "⚠️ Remarque : Le module de scraping fonctionne correctement en local. "
-        "En raison des restrictions de l’environnement Streamlit Cloud "
-        " le scraping peut ne pas s’exécuter en ligne. "
+        "Pour des raisons inconnus le scraping ne s'execute pas en ligne. "
         "Pour tester pleinement toutes les fonctionnalités, veuillez cloner le projet depuis GitHub "
         "et l’exécuter en local en suivant les instructions dans le readme.")
     if st.button("Lancer le scraping") and not st.session_state.scraping:
