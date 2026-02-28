@@ -52,7 +52,7 @@ if menu_option == "Scraper en utilisant Selenium":
         "⚠️ Remarque : Le module de scraping fonctionne correctement en local. "
         "En revanche, il ne peut pas s’exécuter en ligne (par exemple sur Streamlit Cloud) "
         "car l’environnement distant ne fournit pas de navigateur graphique ni de support pour Selenium avec Chrome. "
-        "Pour tester toutes les fonctionnalités, il est recommandé de cloner le projet depuis GitHub "
+        "Pour tester cette  fonctionnalités, il est recommandé de cloner le projet depuis GitHub "
         "et de l’exécuter localement en suivant les instructions du README."
     )
     # Bouton unique
