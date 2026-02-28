@@ -8,46 +8,47 @@ from webdriver_manager.chrome import ChromeDriverManager
 from database.scraping_db import save_to_db
 
 def nettoyer_prix(val):
-    """Nettoie la valeur du prix et retourne float ou np.nan"""
+    """
+    Nettoie la valeur du prix : supprime espaces, virgules, texte non numérique et convertit en float.
+    Retourne np.nan si valeur invalide.
+    """
     if pd.isna(val):
         return np.nan
     val = str(val).strip()
     if 'Prix sur demande' in val:
         return np.nan
+    # Supprimer espaces et virgules
     val = val.replace(' ', '').replace(',', '')
+    # Ne garder que les chiffres et éventuellement un point
     chiffres = ''.join(c for c in val if c.isdigit() or c == '.')
-    return float(chiffres) if chiffres else np.nan
+    if chiffres == '':
+        return np.nan
+    return float(chiffres)
 
 def scrape_category_selenium(categorie, base_url, max_pages=1, remplir_nan=True):
     """
-    Scraper une catégorie sur CoinAfrique avec Selenium (adapté pour Streamlit Cloud)
+    Scraper une catégorie sur CoinAfrique avec Selenium
+    et nettoyer automatiquement les prix.
     """
-    data = []
+    data = []  # liste pour affichage / Streamlit
 
-    # Configurer Chrome en mode headless pour Cloud
+    # Configurer Chrome en mode headless
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new")       # mode headless moderne
-    options.add_argument("--no-sandbox")         # nécessaire sur conteneurs
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-
-    # Installer et lancer le driver
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
-        options=options
-    )
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     try:
         for page in range(1, max_pages + 1):
             url = f"{base_url}?page={page}"
             driver.get(url)
-            time.sleep(2)
+            time.sleep(2)  # laisser le temps au JS de charger
 
-            annonces = driver.find_elements(By.CSS_SELECTOR, "div.col.s6.m4.l3")
+            annonces = driver.find_elements(By.CSS_SELECTOR, "div.col.s6.m4.l3")  # adapter si nécessaire
 
             for ann in annonces:
-                # Titre
+                # Titre / nom
                 try:
                     a_tag = ann.find_element(By.TAG_NAME, "a")
                     titre = a_tag.get_attribute("title") if a_tag else "N/A"
@@ -85,7 +86,7 @@ def scrape_category_selenium(categorie, base_url, max_pages=1, remplir_nan=True)
                 # Sauvegarde dans la DB
                 save_to_db(categorie, titre, prix, location, image_lien)
 
-                # Ajouter à la liste
+                # Ajouter à la liste pour affichage
                 data.append({
                     "Nom / Détails": titre,
                     "Prix": prix,
@@ -94,13 +95,15 @@ def scrape_category_selenium(categorie, base_url, max_pages=1, remplir_nan=True)
                 })
 
     finally:
-        driver.quit()
+        driver.quit()  # fermer le navigateur
 
+    # Transformer en DataFrame pour traitement final
     df = pd.DataFrame(data)
 
-    # Remplir les NaN par la médiane si demandé
+    # Remplir les prix manquants par la médiane si demandé
     if remplir_nan and not df.empty:
         median_prix = df['Prix'].median()
         df['Prix'] = df['Prix'].fillna(median_prix)
+        # print(f"Médiane du prix pour {categorie} : {median_prix:,.0f} FCFA")
 
-    return df.to_dict(orient="records")
+    return df.to_dict(orient="records")  # retourne la liste de dicts pour Streamlit
